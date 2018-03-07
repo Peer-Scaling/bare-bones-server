@@ -1,15 +1,24 @@
 (ns bare-bones-server.core
-  (:require [clojure.tools.nrepl.server
-             :refer (start-server stop-server) :as server]
+  (:require [clojure.tools.nrepl.server :refer [default-handler start-server stop-server]]
+            [cemerick.piggieback :refer [wrap-cljs-repl]]
             [bare-bones-server.team-repl :refer [wrap-classpath]]))
 
 (defonce server (atom nil))
 
 (def default-port 7888)
 
-(defn start [& port]
-  (reset! server (start-server :port (or port default-port)
-                               :handler (server/default-handler #'wrap-classpath))))
+(defn start
+  [cljs-eval? & port]
+  (let [p (or port default-port)
+        s (if cljs-eval?
+            (do
+              (println "Starting CLJS env on port" p)
+              (start-server :port p :handler (default-handler #'wrap-cljs-repl)))
+            (do
+              (println "Starting CLJ env on port" p)
+              (start-server :port p :handler (default-handler #'wrap-classpath))))]
+    (reset! server s)))
 
-(defn stop [server]
+(defn stop
+  [server]
   (stop-server server))
